@@ -25,12 +25,26 @@ function App() {
   const [loading, setLoading] = useState(false)
   const [stocks, setStocks] = useState([])
   const [scanTime, setScanTime] = useState("")
+  const [progress, setProgress] = useState(0)
 
-  const BACKEND_API = "https://YOUR_RENDER_SERVER_URL/scan"
+  const BACKEND_API = "https://stock-volume-scanner.onrender.com/scan"
 
   async function runScanner() {
 
     setLoading(true)
+    setProgress(0)
+
+    let percent = 0
+
+    const timer = setInterval(() => {
+
+      percent += 2
+
+      if (percent <= 95) {
+        setProgress(percent)
+      }
+
+    }, 400)
 
     try {
 
@@ -44,9 +58,15 @@ function App() {
 
       setStocks(data)
 
+      clearInterval(timer)
+
+      setProgress(100)
+
     } catch (e) {
 
-      alert("서버 연결 실패")
+      clearInterval(timer)
+
+      alert("서버 연결 실패 또는 검색 지연")
 
     }
 
@@ -118,7 +138,7 @@ function App() {
                 onClick={runScanner}
                 className="px-5 py-3 rounded-2xl bg-black text-white font-bold"
               >
-                {loading ? "검색중..." : "전종목 검색"}
+                {loading ? `검색중... ${progress}%` : "전종목 검색"}
               </button>
 
               <button
@@ -131,6 +151,27 @@ function App() {
             </div>
 
           </div>
+
+          {loading && (
+
+            <div className="mt-6">
+
+              <div className="w-full bg-zinc-200 rounded-full h-4 overflow-hidden">
+
+                <div
+                  className="bg-black h-4 transition-all duration-300"
+                  style={{ width: `${progress}%` }}
+                ></div>
+
+              </div>
+
+              <div className="mt-2 text-sm text-zinc-500">
+                실시간 거래량 분석중...
+              </div>
+
+            </div>
+
+          )}
 
         </div>
 
@@ -194,10 +235,6 @@ function App() {
 
           </table>
 
-        </div>
-
-        <div className="text-sm text-zinc-500">
-          마지막 검색 시간: {scanTime || "-"}
         </div>
 
       </div>
