@@ -1,0 +1,5 @@
+fastapi
+uvicorn
+finance-datareader
+pandas
+numpy

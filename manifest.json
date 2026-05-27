@@ -1,0 +1,9 @@
+{
+  "name": "거래량 비율 랭킹 검색기",
+  "short_name": "거래량검색",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#000000",
+  "orientation": "portrait"
+}
