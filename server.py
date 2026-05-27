@@ -18,7 +18,12 @@ def scan_market():
 
     result = []
 
+    # KRX 전체 종목
     stocks = fdr.StockListing('KRX')
+
+    # 속도 최적화
+    # 상위 100개만 검색
+    stocks = stocks.head(100)
 
     for _, stock in stocks.iterrows():
 
@@ -36,6 +41,7 @@ def scan_market():
 
             recent_3m_max = int(volumes.tail(60).max())
             all_time_max = int(volumes.max())
+
             latest_volume = int(volumes.iloc[-1])
 
             volume_ratio = round(
@@ -53,6 +59,7 @@ def scan_market():
 
             trade_value = latest_close * latest_volume
 
+            # 거래대금 100억 이상만
             if trade_value < 10000000000:
                 continue
 
