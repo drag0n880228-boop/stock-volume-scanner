@@ -7,68 +7,88 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=['*'],
+    allow_origins=["*"],
     allow_credentials=True,
-    allow_methods=['*'],
-    allow_headers=['*'],
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
-@app.get('/scan')
+@app.get("/scan")
 def scan_market():
 
     result = []
 
-    stocks = fdr.StockListing('KRX')
+    # 코스피200 + 코스닥150
+    kospi = fdr.StockListing("KOSPI").head(200)
+    kosdaq = fdr.StockListing("KOSDAQ").head(150)
 
-    # 속도 최적화
-    stocks = stocks.head(100)
+    stocks = list(kospi.iterrows()) + list(kosdaq.iterrows())
 
-    for _, stock in stocks.iterrows():
+    for _, stock in stocks:
 
         try:
 
-            code = stock['Code']
-            name = stock['Name']
+            code = stock["Code"]
+            name = stock["Name"]
 
             df = fdr.DataReader(code)
 
             if len(df) < 120:
                 continue
 
-            volumes = df['Volume'].astype(np.int64)
+            volumes = df["Volume"].astype(np.int64)
 
-            recent_3m_max = int(volumes.tail(60).max())
+            recent = volumes.tail(60)
+
+            recent_max = int(recent.max())
             all_time_max = int(volumes.max())
 
-            latest_volume = int(volumes.iloc[-1])
+            recent_idx = recent.idxmax()
+            all_time_idx = volumes.idxmax()
 
-            volume_ratio = round(
-                (recent_3m_max / all_time_max) * 100,
-                2
+            recent_days_ago = (
+                df.index[-1] - recent_idx
+            ).days
+
+            all_time_months_ago = round(
+                (df.index[-1] - all_time_idx).days / 30,
+                1
             )
 
-            latest_close = int(df['Close'].iloc[-1])
-            prev_close = int(df['Close'].iloc[-2])
-
-            change_rate = round(
-                ((latest_close - prev_close) / prev_close) * 100,
-                2
+            recent_close = int(
+                df.loc[recent_idx]["Close"]
             )
 
-            trade_value = latest_close * latest_volume
+            current_close = int(
+                df["Close"].iloc[-1]
+            )
 
+            latest_volume = int(
+                df["Volume"].iloc[-1]
+            )
+
+            trade_value = (
+                current_close * latest_volume
+            )
+
+            # 거래대금 필터
             if trade_value < 10000000000:
                 continue
 
+            volume_ratio = round(
+                (recent_max / all_time_max) * 100,
+                2
+            )
+
             result.append({
-                'code': code,
-                'name': name,
-                'recentMax': recent_3m_max,
-                'allTimeMax': all_time_max,
-                'price': f'{latest_close:,}',
-                'change': f'{change_rate:+.2f}%',
-                'value': f'{round(trade_value / 100000000,1)}억',
-                'volumeRatio': volume_ratio
+                "code": code,
+                "name": name,
+                "recentMax": recent_max,
+                "volumeRatio": volume_ratio,
+                "recentDaysAgo": recent_days_ago,
+                "recentClose": f"{recent_close:,}",
+                "currentClose": f"{current_close:,}",
+                "allTimeMonthsAgo": all_time_months_ago
             })
 
         except:
@@ -76,10 +96,7 @@ def scan_market():
 
     result = sorted(
         result,
-        key=lambda x: (
-            -x['volumeRatio'],
-            -float(x['value'].replace('억',''))
-        )
+        key=lambda x: -x["volumeRatio"]
     )
 
-    return result[:50]
+    return result[:10]
