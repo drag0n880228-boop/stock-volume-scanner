@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import FinanceDataReader as fdr
+import pandas as pd
 import numpy as np
 
 app = FastAPI()
@@ -13,7 +14,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 코스피 시총 상위 30개 테스트용
 TOP30_CODES = [
     ("005930","삼성전자"),
     ("000660","SK하이닉스"),
@@ -25,14 +25,13 @@ TOP30_CODES = [
     ("035420","NAVER"),
     ("105560","KB금융"),
     ("055550","신한지주"),
-    ("035720","카카오"),
     ("051910","LG화학"),
     ("006400","삼성SDI"),
     ("028260","삼성물산"),
     ("032830","삼성생명"),
     ("017670","SK텔레콤"),
     ("086790","하나금융지주"),
-    ("003670","포스코홀딩스"),
+    ("003670","POSCO홀딩스"),
     ("066570","LG전자"),
     ("015760","한국전력"),
     ("034730","SK"),
@@ -44,7 +43,8 @@ TOP30_CODES = [
     ("316140","우리금융지주"),
     ("024110","기업은행"),
     ("267250","HD현대"),
-    ("030200","KT")
+    ("030200","KT"),
+    ("035720","카카오")
 ]
 
 @app.get("/scan")
@@ -56,36 +56,26 @@ def scan_market():
 
         try:
 
-            # 속도 개선
             df = fdr.DataReader(
                 code,
                 "2020-01-01"
             )
 
-            if len(df) < 60:
+            if len(df) < 100:
                 continue
 
             volumes = df["Volume"].astype(np.int64)
 
-            recent = volumes.tail(60)
+            recent_df = df.tail(60)
 
-            recent_max = int(recent.max())
-            all_time_max = int(volumes.max())
+            recent_max_idx = recent_df["Volume"].idxmax()
 
-            recent_idx = recent.idxmax()
-            all_time_idx = volumes.idxmax()
-
-            recent_days_ago = (
-                df.index[-1] - recent_idx
-            ).days
-
-            all_time_months_ago = round(
-                (df.index[-1] - all_time_idx).days / 30,
-                1
+            recent_max_volume = int(
+                recent_df.loc[recent_max_idx]["Volume"]
             )
 
             recent_close = int(
-                df.loc[recent_idx]["Close"]
+                recent_df.loc[recent_max_idx]["Close"]
             )
 
             current_close = int(
@@ -93,19 +83,51 @@ def scan_market():
             )
 
             profit_rate = round(
-                ((current_close - recent_close)
-                 / recent_close) * 100,
+                (
+                    (current_close - recent_close)
+                    / recent_close
+                ) * 100,
                 2
             )
 
-            # 역대 거래량 순위
-            volume_rank = int(
-                (volumes > recent_max).sum()
-            ) + 1
+            all_time_max_idx = volumes.idxmax()
+
+            all_time_max = int(
+                volumes.max()
+            )
 
             volume_ratio = round(
-                (recent_max / all_time_max) * 100,
+                recent_max_volume
+                / all_time_max
+                * 100,
                 2
+            )
+
+            sorted_volumes = (
+                volumes
+                .sort_values(ascending=False)
+                .reset_index(drop=True)
+            )
+
+            volume_rank = (
+                sorted_volumes[
+                    sorted_volumes
+                    > recent_max_volume
+                ].count()
+                + 1
+            )
+
+            recent_days_ago = (
+                df.index[-1]
+                - recent_max_idx
+            ).days
+
+            all_time_months_ago = round(
+                (
+                    df.index[-1]
+                    - all_time_max_idx
+                ).days / 30,
+                1
             )
 
             result.append({
@@ -113,8 +135,19 @@ def scan_market():
                 "code": code,
                 "name": name,
 
+                "volumeRatio": volume_ratio,
+
+                "volumeRank": int(
+                    volume_rank
+                ),
+
                 "recentMax":
-                    f"{recent_max:,}",
+                    f"{recent_max_volume:,}",
+
+                "recentDate":
+                    recent_max_idx.strftime(
+                        "%Y-%m-%d"
+                    ),
 
                 "recentDaysAgo":
                     recent_days_ago,
@@ -131,14 +164,13 @@ def scan_market():
                 "allTimeMax":
                     f"{all_time_max:,}",
 
+                "allTimeDate":
+                    all_time_max_idx.strftime(
+                        "%Y-%m-%d"
+                    ),
+
                 "allTimeMonthsAgo":
-                    all_time_months_ago,
-
-                "volumeRank":
-                    volume_rank,
-
-                "volumeRatio":
-                    volume_ratio
+                    all_time_months_ago
 
             })
 
@@ -148,9 +180,9 @@ def scan_market():
     result = sorted(
         result,
         key=lambda x: (
-            x["volumeRank"],
-            -x["volumeRatio"]
+            -x["volumeRatio"],
+            x["volumeRank"]
         )
     )
 
-    return result
+    return result[:10]
