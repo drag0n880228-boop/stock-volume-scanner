@@ -1,27 +1,22 @@
-<th>종목</th>
-<th>비율</th>
-<th>최근최대거래량</th>
-<th>몇일전</th>
-<th>당시종가</th>
-<th>현재종가</th>
-<th>역대최대시점</th>
-
 <!DOCTYPE html>
 <html lang="ko">
+
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>거래량 비율 랭킹 검색기</title>
 
-  <link rel="manifest" href="manifest.json" />
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<title>거래량 비율 랭킹 TOP10</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
 </head>
 
 <body class="bg-zinc-100">
+
 <div id="root"></div>
 
 <script type="text/babel">
@@ -30,229 +25,209 @@ const { useState } = React
 
 function App() {
 
-  const [loading, setLoading] = useState(false)
   const [stocks, setStocks] = useState([])
-  const [scanTime, setScanTime] = useState("")
-  const [progress, setProgress] = useState(0)
+  const [loading, setLoading] = useState(false)
 
-  const BACKEND_API = "https://stock-volume-scanner.onrender.com/scan"
+  const API =
+    "https://stock-volume-scanner.onrender.com/scan"
 
   async function runScanner() {
 
     setLoading(true)
-    setProgress(0)
-
-    let percent = 0
-
-    const timer = setInterval(() => {
-
-      percent += 2
-
-      if (percent <= 95) {
-        setProgress(percent)
-      }
-
-    }, 400)
 
     try {
 
-      const response = await fetch(BACKEND_API)
-
-      if (!response.ok) {
-        throw new Error("API ERROR")
-      }
+      const response = await fetch(API)
 
       const data = await response.json()
 
       setStocks(data)
 
-      clearInterval(timer)
+    } catch(e) {
 
-      setProgress(100)
-
-    } catch (e) {
-
-      clearInterval(timer)
-
-      alert("서버 연결 실패 또는 검색 지연")
+      alert("서버 연결 실패")
 
     }
-
-    setScanTime(new Date().toLocaleTimeString())
 
     setLoading(false)
   }
 
-  function downloadCSV() {
-
-    const headers = [
-      "종목코드",
-      "종목명",
-      "최근3개월최대",
-      "역대최대",
-      "비율"
-    ]
-
-    const rows = stocks.map(s => [
-      s.code,
-      s.name,
-      s.recentMax,
-      s.allTimeMax,
-      s.volumeRatio + "%"
-    ])
-
-    const csv = [headers, ...rows]
-      .map(r => r.join(","))
-      .join("\n")
-
-    const blob = new Blob([csv], {
-      type: "text/csv;charset=utf-8;"
-    })
-
-    const link = document.createElement("a")
-
-    link.href = URL.createObjectURL(blob)
-
-    link.download = "volume_ratio_rank.csv"
-
-    link.click()
-  }
-
   return (
 
-    <div className="min-h-screen p-5">
+    <div className="max-w-7xl mx-auto p-5">
 
-      <div className="max-w-7xl mx-auto space-y-5">
+      <div className="bg-white rounded-3xl shadow-lg p-6 mb-5">
 
-        <div className="bg-white rounded-3xl shadow-lg p-7">
+        <h1 className="text-3xl font-bold">
+          거래량 비율 랭킹 TOP10
+        </h1>
 
-          <div className="flex flex-col lg:flex-row lg:justify-between gap-5">
+        <p className="text-zinc-500 mt-2">
+          최근 3개월 최대 거래량 기준
+        </p>
 
-            <div>
+        <button
+          onClick={runScanner}
+          className="mt-5 px-5 py-3 bg-black text-white rounded-xl font-bold"
+        >
+          {loading ? "검색중..." : "검색 시작"}
+        </button>
 
-              <h1 className="text-4xl font-bold">
-                거래량 비율 랭킹 검색기
-              </h1>
+      </div>
 
-              <p className="text-zinc-500 mt-3 text-lg">
-                최근 3개월 최대 거래량 ÷ 역대 최대 거래량
-              </p>
+      <div className="bg-white rounded-3xl shadow-lg p-5 overflow-x-auto">
 
-            </div>
+        <table className="w-full text-sm">
 
-            <div className="flex gap-3 flex-wrap">
+          <thead>
 
-              <button
-                onClick={runScanner}
-                className="px-5 py-3 rounded-2xl bg-black text-white font-bold"
+            <tr className="border-b">
+
+              <th className="p-3 text-left">종목</th>
+
+              <th className="p-3 text-left">
+                거래량순위
+              </th>
+
+              <th className="p-3 text-left">
+                비율
+              </th>
+
+              <th className="p-3 text-left">
+                최근최대거래량
+              </th>
+
+              <th className="p-3 text-left">
+                최근최대발생일
+              </th>
+
+              <th className="p-3 text-left">
+                몇일전
+              </th>
+
+              <th className="p-3 text-left">
+                당시종가
+              </th>
+
+              <th className="p-3 text-left">
+                현재종가
+              </th>
+
+              <th className="p-3 text-left">
+                수익률
+              </th>
+
+              <th className="p-3 text-left">
+                역대최대거래량
+              </th>
+
+              <th className="p-3 text-left">
+                역대최대발생일
+              </th>
+
+              <th className="p-3 text-left">
+                역대최대시점
+              </th>
+
+            </tr>
+
+          </thead>
+
+          <tbody>
+
+            {stocks.map((s, i) => (
+
+              <tr
+                key={i}
+                className="border-b hover:bg-zinc-50"
               >
-                {loading ? `검색중... ${progress}%` : "전종목 검색"}
-              </button>
 
-              <button
-                onClick={downloadCSV}
-                className="px-5 py-3 rounded-2xl border bg-white"
-              >
-                CSV 다운로드
-              </button>
+                <td className="p-3">
 
-            </div>
+                  <div className="font-bold">
+                    {s.name}
+                  </div>
 
-          </div>
+                  <div className="text-xs text-zinc-500">
+                    {s.code}
+                  </div>
 
-          {loading && (
+                </td>
 
-            <div className="mt-6">
+                <td className="p-3 font-bold text-red-500">
+                  {s.volumeRank}위
+                </td>
 
-              <div className="w-full bg-zinc-200 rounded-full h-4 overflow-hidden">
+                <td className="p-3 font-bold text-blue-600">
+                  {s.volumeRatio}%
+                </td>
 
-                <div
-                  className="bg-black h-4 transition-all duration-300"
-                  style={{ width: `${progress}%` }}
-                ></div>
+                <td className="p-3">
+                  {s.recentMax}
+                </td>
 
-              </div>
+                <td className="p-3">
+                  {s.recentDate}
+                </td>
 
-              <div className="mt-2 text-sm text-zinc-500">
-                실시간 거래량 분석중...
-              </div>
+                <td className="p-3">
+                  {s.recentDaysAgo}일전
+                </td>
 
-            </div>
+                <td className="p-3">
+                  {s.recentClose}원
+                </td>
 
-          )}
+                <td className="p-3 font-bold">
+                  {s.currentClose}원
+                </td>
 
-        </div>
+                <td
+                  className={
+                    "p-3 font-bold " +
+                    (
+                      s.profitRate >= 0
+                      ? "text-red-500"
+                      : "text-blue-500"
+                    )
+                  }
+                >
+                  {s.profitRate}%
+                </td>
 
-        <div className="bg-white rounded-3xl shadow-lg p-6 overflow-x-auto">
+                <td className="p-3">
+                  {s.allTimeMax}
+                </td>
 
-          <table className="w-full">
+                <td className="p-3">
+                  {s.allTimeDate}
+                </td>
 
-            <thead>
+                <td className="p-3">
+                  {s.allTimeMonthsAgo}개월전
+                </td>
 
-              <tr className="border-b text-left text-zinc-500">
-                <th className="pb-4">종목</th>
-                <th className="pb-4">현재가</th>
-                <th className="pb-4">등락률</th>
-                <th className="pb-4">최근3개월최대</th>
-                <th className="pb-4">역대최대</th>
-                <th className="pb-4">비율</th>
               </tr>
 
-            </thead>
+            ))}
 
-            <tbody>
+          </tbody>
 
-              {stocks.map((stock, idx) => (
-
-                <tr key={idx} className="border-b hover:bg-zinc-50">
-
-                  <td className="py-5">
-                    <div className="font-bold text-lg">
-                      {stock.name}
-                    </div>
-                    <div className="text-zinc-500 text-sm">
-                      {stock.code}
-                    </div>
-                  </td>
-
-                  <td className="py-5">
-                    {stock.price}원
-                  </td>
-
-                  <td className="py-5 text-green-600 font-bold">
-                    {stock.change}
-                  </td>
-
-                  <td className="py-5">
-                    {Number(stock.recentMax).toLocaleString()}
-                  </td>
-
-                  <td className="py-5 text-red-500 font-bold">
-                    {Number(stock.allTimeMax).toLocaleString()}
-                  </td>
-
-                  <td className="py-5 text-blue-600 font-bold">
-                    {stock.volumeRatio}%
-                  </td>
-
-                </tr>
-
-              ))}
-
-            </tbody>
-
-          </table>
-
-        </div>
+        </table>
 
       </div>
 
     </div>
 
   )
+
 }
 
-ReactDOM.createRoot(document.getElementById("root")).render(<App />)
+ReactDOM
+.createRoot(
+  document.getElementById("root")
+)
+.render(<App />)
 
 </script>
 
